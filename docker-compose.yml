@@ -1,0 +1,45 @@
+# Docker Compose for easier management
+# Usage:
+#   docker-compose up -d dev
+#   docker-compose exec dev bash
+
+version: '3.8'
+
+services:
+  # Development environment
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: orpheus-dev:latest
+    container_name: orpheus-dev
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - node-modules:/app/node_modules
+    ports:
+      - "8081:8081"  # Metro bundler
+    stdin_open: true
+    tty: true
+    environment:
+      - GRADLE_OPTS=-Xmx2048m -XX:MaxMetaspaceSize=512m
+      - NODE_OPTIONS=--max-old-space-size=4096
+    command: bash
+
+  # CI/CD builder
+  ci:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: orpheus-ci:latest
+    container_name: orpheus-ci
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+    environment:
+      - GRADLE_OPTS=-Xmx2048m -XX:MaxMetaspaceSize=512m
+    command: cd android && ./gradlew assembleRelease
+
+volumes:
+  gradle-cache:
+  node-modules:

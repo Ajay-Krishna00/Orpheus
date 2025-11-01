@@ -1,0 +1,78 @@
+# CI/CD Dockerfile for automated builds
+# This is optimized for CI pipelines (GitHub Actions, GitLab CI, etc.)
+# 
+# Usage:
+#   docker build -f Dockerfile.ci -t orpheus-ci .
+#   docker run -v ${PWD}:/app orpheus-ci ./gradlew assembleRelease
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+  curl \
+  wget \
+  git \
+  unzip \
+  openjdk-17-jdk \
+  locales \
+  && locale-gen en_US.UTF-8 \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Install Node.js 18.x
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+  && apt-get install -y nodejs \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# Android SDK setup
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=$ANDROID_HOME
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+
+RUN mkdir -p $ANDROID_HOME/cmdline-tools \
+  && cd $ANDROID_HOME/cmdline-tools \
+  && wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip \
+  && unzip -q commandlinetools-linux-9477386_latest.zip \
+  && mv cmdline-tools latest \
+  && rm commandlinetools-linux-9477386_latest.zip
+
+RUN yes | sdkmanager --licenses
+
+# Install only what we need for building (minimal)
+RUN sdkmanager \
+  "platform-tools" \
+  "platforms;android-35" \
+  "build-tools;34.0.0" \
+  "ndk;25.1.8937393"
+
+ENV ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393
+
+# Install Gradle 8.8
+RUN wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip \
+  && unzip -q gradle-8.8-bin.zip -d /opt \
+  && rm gradle-8.8-bin.zip
+ENV GRADLE_HOME=/opt/gradle-8.8
+ENV PATH=$PATH:$GRADLE_HOME/bin
+
+WORKDIR /app
+
+# Pre-install dependencies in a separate layer for caching
+COPY package*.json ./
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build the app
+RUN cd android && ./gradlew assembleDebug --no-daemon
+
+CMD ["bash"]

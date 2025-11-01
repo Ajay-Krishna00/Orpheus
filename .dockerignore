@@ -1,0 +1,51 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/gradle-wrapper.jar
+*.apk
+*.aab
+
+# iOS (if any)
+ios/build/
+ios/Pods/
+*.xcworkspace
+*.xcuserstate
+
+# Metro
+.metro-health-check*
+
+# Build artifacts
+*.jks
+*.keystore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.log
+*.tmp
+.cache/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose.yml
+.dockerignore

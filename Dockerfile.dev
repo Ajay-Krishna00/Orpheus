@@ -1,0 +1,108 @@
+# Development Dockerfile for React Native 0.74.5
+# This sets up the exact environment that works for building Orpheus
+# 
+# Usage:
+#   docker build -f Dockerfile.dev -t orpheus-dev .
+#   docker run -it -v ${PWD}:/app orpheus-dev bash
+
+FROM ubuntu:22.04
+
+# Avoid prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set locale
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y \
+  curl \
+  wget \
+  git \
+  unzip \
+  zip \
+  openjdk-17-jdk \
+  locales \
+  && locale-gen en_US.UTF-8 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Set JAVA_HOME
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Install Node.js 18.x (compatible with RN 0.74.5)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+  && apt-get install -y nodejs \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install Watchman (improves build performance)
+RUN cd /tmp \
+  && wget https://github.com/facebook/watchman/releases/download/v2023.11.20.00/watchman-v2023.11.20.00-linux.zip \
+  && unzip watchman-*.zip \
+  && cd watchman-*-linux \
+  && mkdir -p /usr/local/{bin,lib} /usr/local/var/run/watchman \
+  && cp bin/* /usr/local/bin \
+  && cp lib/* /usr/local/lib \
+  && chmod 755 /usr/local/bin/watchman \
+  && chmod 2777 /usr/local/var/run/watchman \
+  && cd /tmp \
+  && rm -rf watchman-*
+
+# Install Android SDK
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=$ANDROID_HOME
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+
+# Download and install Android Command Line Tools
+RUN mkdir -p $ANDROID_HOME/cmdline-tools \
+  && cd $ANDROID_HOME/cmdline-tools \
+  && wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip \
+  && unzip -q commandlinetools-linux-9477386_latest.zip \
+  && mv cmdline-tools latest \
+  && rm commandlinetools-linux-9477386_latest.zip
+
+# Accept Android SDK licenses
+RUN yes | sdkmanager --licenses
+
+# Install exact Android SDK components that work with our config
+# - API 35 for compileSdk
+# - API 34 platform tools
+# - Build tools 34.0.0
+# - NDK 25.1.8937393 (exactly what we tested)
+RUN sdkmanager \
+  "platform-tools" \
+  "platforms;android-35" \
+  "platforms;android-34" \
+  "build-tools;34.0.0" \
+  "ndk;25.1.8937393" \
+  "cmake;3.22.1"
+
+# Set NDK path
+ENV ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393
+
+# Install Gradle 8.8 (exact version we tested)
+ENV GRADLE_VERSION=8.8
+RUN wget -q https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip \
+  && unzip -q gradle-${GRADLE_VERSION}-bin.zip -d /opt \
+  && rm gradle-${GRADLE_VERSION}-bin.zip
+ENV GRADLE_HOME=/opt/gradle-${GRADLE_VERSION}
+ENV PATH=$PATH:$GRADLE_HOME/bin
+
+# Create workspace
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install npm dependencies
+RUN npm install
+
+# Copy the rest of the application
+COPY . .
+
+# Expose Metro bundler port
+EXPOSE 8081
+
+# Default command
+CMD ["bash"]
