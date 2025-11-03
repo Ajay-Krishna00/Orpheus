@@ -65,14 +65,4 @@ ENV PATH=$PATH:$GRADLE_HOME/bin
 
 WORKDIR /app
 
-# Pre-install dependencies in a separate layer for caching
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
-
-# Copy source code
-COPY . .
-
-# Build the app
-RUN cd android && ./gradlew assembleDebug --no-daemon
-
 CMD ["bash"]

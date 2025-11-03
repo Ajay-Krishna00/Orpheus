@@ -32,7 +32,7 @@ jobs:
           -v ${{ github.workspace }}:/app \
           -e GRADLE_OPTS="-Xmx2048m -XX:MaxMetaspaceSize=512m" \
           orpheus-ci:${{ github.sha }} \
-          bash -c "cd android && ./gradlew assembleDebug --no-daemon --stacktrace"
+          bash -c "npm install --legacy-peer-deps && cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace"
     
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -48,7 +48,7 @@ jobs:
           -v ${{ github.workspace }}:/app \
           -e GRADLE_OPTS="-Xmx2048m -XX:MaxMetaspaceSize=512m" \
           orpheus-ci:${{ github.sha }} \
-          bash -c "cd android && ./gradlew assembleRelease --no-daemon --stacktrace"
+          bash -c "npm install --legacy-peer-deps && cd android && chmod +x gradlew && ./gradlew assembleRelease --no-daemon --stacktrace"
     
     - name: Upload Release APK
       if: github.ref == 'refs/heads/main'
