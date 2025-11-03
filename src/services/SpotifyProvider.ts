@@ -1,6 +1,7 @@
 import { Album, Artist, Playlist, Track } from "../interface/types";
 import { MetadataProvider } from "./MetadataProvider";
 import axios from 'axios';
+import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from '@env';
 
 /**
  * SpotifyProvider - Metadata source (like Spotube)
@@ -12,16 +13,15 @@ import axios from 'axios';
  * 1. Go to https://developer.spotify.com/dashboard
  * 2. Create an app
  * 3. Get Client ID and Client Secret
- * 4. Add them below (lines 25-26)
+ * 4. Add them to .env file (see .env.example)
  */
 export class SpotifyProvider extends MetadataProvider {
   private accessToken: string = '';
   private tokenExpiresAt: number = 0;
 
-  // TODO: Replace with your Spotify API credentials
-  // Get them from: https://developer.spotify.com/dashboard
-  private clientId = 'ed39fde169e541b0a07082c5c05bf1fb';
-  private clientSecret = '369076da30414265bffc96533cab84b0';
+  // Credentials loaded from .env file
+  private clientId = SPOTIFY_CLIENT_ID;
+  private clientSecret = SPOTIFY_CLIENT_SECRET;
 
   private api = axios.create({
     baseURL: 'https://api.spotify.com/v1',
