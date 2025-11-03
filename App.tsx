@@ -7,6 +7,7 @@ import TrackPlayer, {
 } from 'react-native-track-player';
 import { SafeAreaView, StatusBar } from 'react-native';
 import { SearchScreen } from './src/screens/SearchScreen';
+import { Colors } from './src/theme/colors';
 
 const Stack = createStackNavigator();
 
@@ -48,19 +49,17 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.black }}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.black} />
       <NavigationContainer>
         <Stack.Navigator
           screenOptions={{
-            headerStyle: { backgroundColor: '#121212' },
-            headerTintColor: '#fff',
+            headerShown: false,
           }}
         >
           <Stack.Screen
             name="Search"
             component={SearchScreen}
-            options={{ title: 'Music Search' }}
           />
         </Stack.Navigator>
       </NavigationContainer>
