@@ -23,8 +23,11 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const [trackLoading, setTrackLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [closePlayer, setClosePlayer] = useState(false);
+
   useEffect(() => {
-    const setupPlayer = async () => {
+    const setupPlay = async () => {
       try {
         // Setup the player
         await TrackPlayer.setupPlayer({
@@ -48,12 +51,19 @@ export default function App() {
         });
 
         console.log('TrackPlayer setup complete ✅');
+        setIsPlayerReady(true);
       } catch (err) {
         console.error('TrackPlayer setup failed:', err);
+        setIsPlayerReady(false);
       }
     };
 
-    setupPlayer();
+    setupPlay();
+    return () => {
+      TrackPlayer.reset().catch((error: unknown) => {
+        console.error('TrackPlayer reset on unmount failed:', error);
+      });
+    };
   }, []);
 
   return (
@@ -87,16 +97,18 @@ export default function App() {
           </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
-      <Player />
+      {isPlayerReady && <Player setClosePlayer={setClosePlayer} />}
 
       {notFound && (
-        <View style={styles.notFoundContainer}>
+        <View
+          style={[styles.notFoundContainer, {height: !closePlayer ? 240 : 85}]}>
           <Text style={styles.notFoundText}>Sorry</Text>
           <Text style={styles.notFoundText}>Audio Not Found</Text>
         </View>
       )}
       {trackLoading && (
-        <View style={styles.notFoundContainer}>
+        <View
+          style={[styles.notFoundContainer, {height: !closePlayer ? 240 : 85}]}>
           <ActivityIndicator size="large" color={Colors.spotifyGreen} />
           <Text style={styles.notFoundText}>Loading...</Text>
         </View>
@@ -122,7 +134,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    height: 220,
     zIndex: 10001,
   },
   notFoundText: {

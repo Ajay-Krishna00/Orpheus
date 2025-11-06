@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {Track} from '../interface/types';
 import TrackPlayer from 'react-native-track-player';
 import {
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  Animated,
 } from 'react-native';
 import {SpotifyProvider} from '../services/SpotifyProvider';
 import {YouTubeAudioProvider} from '../services/YouTubeAudioProvider';
@@ -42,6 +43,29 @@ export const SearchScreen = ({
   const [track, setTrack] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
+  const heartBeat = useRef(new Animated.Value(0)).current;
+  const loop = useRef<Animated.CompositeAnimation | null>(null);
+
+  heartBeat.setValue(0);
+  loop.current = Animated.loop(
+    Animated.sequence([
+      Animated.timing(heartBeat, {
+        toValue: 1,
+        duration: 1600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(heartBeat, {
+        toValue: 0,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+    ]),
+  );
+  loop.current.start();
+  const beatScale = heartBeat.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.1, 1],
+  });
 
   const onSearch = async () => {
     if (!query) return;
@@ -82,7 +106,7 @@ export const SearchScreen = ({
       console.log('✅ Track added, starting playback...');
       setCurrentTrackId(track.id);
       await TrackPlayer.play();
-      sleep(2000);
+      sleep(2500);
       setTrackLoading(false);
     } catch (e) {
       console.log('❌ Playback failed:', e);
@@ -115,9 +139,12 @@ export const SearchScreen = ({
             />
             <Text style={styles.headerTitle}>Orpheus</Text>
           </View>
-          <Pressable onPress={() => navigation.navigate('Favorite')}>
-            <FontAwesome name={'heart'} size={25} color={Colors.error} />
-          </Pressable>
+          <Animated.View
+            style={{transform: [{scale: beatScale}], paddingRight: 5}}>
+            <Pressable onPress={() => navigation.navigate('Favorite')}>
+              <FontAwesome name={'heart'} size={25} color={Colors.error} />
+            </Pressable>
+          </Animated.View>
         </View>
         <Text style={styles.headerSubtitle}>Find your favorite music</Text>
       </View>

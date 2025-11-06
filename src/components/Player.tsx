@@ -1,5 +1,13 @@
-import React, {useEffect, useState} from 'react';
-import {View, Text, Pressable, StyleSheet, Animated, Image} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Animated,
+  Image,
+  Easing,
+} from 'react-native';
 import TrackPlayer, {
   usePlaybackState,
   useProgress,
@@ -144,13 +152,24 @@ const upsertArtistRelations = async (
   }
 };
 
-export const Player = () => {
+export const Player = ({
+  setClosePlayer,
+}: {
+  setClosePlayer: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
   const playbackState = usePlaybackState();
   const progress = useProgress();
   const [repeatMode, setRepeatMode] = useState<number>(0); // 0: off, 1: one, 2: all
   const [track, setTrack] = useState<any>(null);
   const [slideAnim] = useState(new Animated.Value(0));
   const [isFavorite, setIsFavorite] = useState(false);
+  const [close, setClose] = useState(false);
+  const rotationAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const secPulseAnim = useRef(new Animated.Value(0)).current;
+  const rotationLoop = useRef<Animated.CompositeAnimation | null>(null);
+  const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
+  const secPulseLoop = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     const getCurrentTrack = async () => {
@@ -170,6 +189,81 @@ export const Player = () => {
     };
     getCurrentTrack();
   }, [playbackState, slideAnim]);
+
+  useEffect(() => {
+    const shouldAnimate = close && playbackState.state === State.Playing;
+
+    if (shouldAnimate) {
+      rotationLoop.current?.stop();
+      pulseLoop.current?.stop();
+      secPulseLoop.current?.stop();
+
+      rotationAnim.setValue(0);
+      pulseAnim.setValue(0);
+      secPulseAnim.setValue(0);
+
+      rotationLoop.current = Animated.loop(
+        Animated.timing(rotationAnim, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+
+      pulseLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1200,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0,
+            duration: 1200,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+      secPulseLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.delay(200),
+          Animated.timing(secPulseAnim, {
+            toValue: 1,
+            duration: 1100,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(secPulseAnim, {
+            toValue: 0,
+            duration: 1100,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+      rotationLoop.current.start();
+      pulseLoop.current.start();
+      secPulseLoop.current.start();
+    } else {
+      rotationLoop.current?.stop();
+      pulseLoop.current?.stop();
+      secPulseLoop.current?.stop();
+      rotationAnim.stopAnimation(() => rotationAnim.setValue(0));
+      pulseAnim.stopAnimation(() => pulseAnim.setValue(0));
+      secPulseAnim.stopAnimation(() => secPulseAnim.setValue(0));
+    }
+
+    return () => {
+      rotationLoop.current?.stop();
+      pulseLoop.current?.stop();
+      secPulseLoop.current?.stop();
+    };
+  }, [close, playbackState.state, rotationAnim, pulseAnim, secPulseAnim]);
 
   useEffect(() => {
     const loadFavoriteStatus = async () => {
@@ -280,6 +374,35 @@ export const Player = () => {
     inputRange: [0, 1],
     outputRange: [200, 0],
   });
+
+  const miniSpin = rotationAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const pulseScale = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.4],
+  });
+
+  const pulseOpacity = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 0],
+  });
+
+  const secPulseScale = secPulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.2],
+  });
+
+  const secPulseOpacity = secPulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 0],
+  });
+
+  const shouldAnimateMiniPlayer = close && isPlaying;
+  const pulseColor = Colors.spotifyGreen;
+  const secondaryPulseColor = Colors.spotifyGreen;
 
   const ensureLocalUser = async () => {
     const usersCollection = database.collections.get('users');
@@ -542,174 +665,261 @@ export const Player = () => {
     }
   };
 
+  const handleClose = () => {
+    setClose(!close);
+    setClosePlayer(!close);
+  };
+
   return (
-    <Animated.View style={[styles.container, {transform: [{translateY}]}]}>
-      {/* Player Content */}
-      <View style={styles.content}>
-        {/* Track Info */}
-        <View style={styles.trackInfoRow}>
-          {track.artwork ? (
-            <Image
-              source={{uri: track.artwork}}
-              style={styles.albumArt}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.albumArt}>
-              <Text style={styles.albumArtIcon}>🎵</Text>
-            </View>
-          )}
-
-          <View style={styles.textContainer}>
-            <Text style={styles.trackTitle} numberOfLines={1}>
-              {track.title}
-            </Text>
-            <Text style={styles.trackArtist} numberOfLines={1}>
-              {track.artist}
-            </Text>
-          </View>
-
-          {/* Quick Play/Pause */}
-          <Pressable
-            onPress={() =>
-              isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
-            }
-            style={({pressed}) => [
-              styles.quickPlayButton,
-              pressed && styles.buttonPressed,
-            ]}>
-            <Text style={styles.quickPlayIcon}>
-              {isPlaying ? (
-                <MaterialIcons
-                  name="pause-circle-outline"
-                  size={34}
-                  color={Colors.textPrimary}
-                />
-              ) : (
-                <MaterialIcons
-                  name="play-circle-outline"
-                  size={34}
-                  color={Colors.textPrimary}
-                />
-              )}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Controls */}
-        <View style={styles.controls}>
-          <Pressable
-            onPress={() => {
-              setRepeatMode(prevMode => (prevMode + 1) % 3);
-            }}
-            style={({pressed}) => {
-              return [styles.controlButton, pressed && styles.buttonPressed];
-            }}>
-            {repeatMode === 2 ? (
-              <MaterialCommunityIcons
-                name="repeat"
-                size={26}
-                color={Colors.spotifyGreenDark}
-              />
-            ) : repeatMode === 1 ? (
-              <MaterialIcons
-                name="repeat-one"
-                size={26}
-                color={Colors.spotifyGreenDark}
-              />
-            ) : (
-              <MaterialCommunityIcons
-                name="repeat-off"
-                size={26}
+    <>
+      {!close && (
+        <Animated.View style={[styles.container, {transform: [{translateY}]}]}>
+          <View>
+            <Pressable
+              style={({pressed}) => [
+                styles.closeButton,
+                pressed && styles.closeBtnPressed,
+              ]}
+              onPress={handleClose}>
+              <FontAwesome
+                name={'chevron-down'}
+                size={20}
                 color={Colors.textSecondary}
               />
-            )}
-          </Pressable>
-          {/* Previous Button */}
-          <Pressable
-            onPress={() => TrackPlayer.skipToPrevious()}
-            style={({pressed}) => [
-              styles.controlButton,
-              pressed && styles.buttonPressed,
-            ]}>
-            <Text style={styles.controlIcon}>⏮</Text>
-          </Pressable>
-
-          {/* Play/Pause Button */}
-          <Pressable
-            onPress={() =>
-              isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
-            }
-            style={({pressed}) => [
-              styles.controlButton,
-              styles.playButton,
-              pressed && styles.buttonPressed,
-            ]}>
-            {isPlaying ? (
-              <MaterialIcons
-                name="pause-circle-outline"
-                size={40}
-                color={Colors.textPrimary}
-              />
-            ) : (
-              <MaterialIcons
-                name="play-circle-outline"
-                size={40}
-                color={Colors.textPrimary}
-              />
-            )}
-          </Pressable>
-
-          {/* Next Button */}
-          <Pressable
-            onPress={() => TrackPlayer.skipToNext()}
-            style={({pressed}) => [
-              styles.controlButton,
-              pressed && styles.buttonPressed,
-            ]}>
-            <Text style={styles.controlIcon}>⏭</Text>
-          </Pressable>
-
-          {/* Like Button */}
-          <Pressable
-            onPress={handleFav}
-            style={({pressed}) => {
-              return [styles.controlButton, pressed && styles.buttonPressed];
-            }}>
-            <FontAwesome
-              name={isFavorite ? 'heart' : 'heart-o'}
-              size={22}
-              color={isFavorite ? Colors.spotifyGreen : Colors.textSecondary}
-            />
-          </Pressable>
-        </View>
-
-        {/* Progress Bar - Interactable */}
-        <View style={styles.progressSection}>
-          <View style={styles.timeContainer}>
-            <Text style={styles.timeText}>{formatTime(progress.position)}</Text>
-            <Text style={styles.timeText}>{formatTime(progress.duration)}</Text>
+            </Pressable>
           </View>
+          {/* Player Content */}
+          <View style={styles.content}>
+            {/* Track Info */}
+            <View style={styles.trackInfoRow}>
+              {track.artwork ? (
+                <Image
+                  source={{uri: track.artwork}}
+                  style={styles.albumArt}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.albumArt}>
+                  <Text style={styles.albumArtIcon}>🎵</Text>
+                </View>
+              )}
 
-          <Pressable
-            style={styles.progressBarContainer}
-            onPress={e => {
-              const {locationX} = e.nativeEvent;
-              const containerWidth = 350; // approximate width
-              const newPosition =
-                (locationX / containerWidth) * progress.duration;
-              handleSeek(newPosition);
-            }}>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progressFill, {width: `${progressPercent}%`}]}>
-                <View style={styles.progressThumb} />
+              <View style={styles.textContainer}>
+                <Text style={styles.trackTitle} numberOfLines={1}>
+                  {track.title}
+                </Text>
+                <Text style={styles.trackArtist} numberOfLines={1}>
+                  {track.artist}
+                </Text>
               </View>
+
+              {/* Quick Play/Pause */}
+              <Pressable
+                onPress={() =>
+                  isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
+                }
+                style={({pressed}) => [
+                  styles.quickPlayButton,
+                  pressed && styles.buttonPressed,
+                ]}>
+                <Text style={styles.quickPlayIcon}>
+                  {isPlaying ? (
+                    <MaterialIcons
+                      name="pause-circle-outline"
+                      size={34}
+                      color={Colors.textPrimary}
+                    />
+                  ) : (
+                    <MaterialIcons
+                      name="play-circle-outline"
+                      size={34}
+                      color={Colors.textPrimary}
+                    />
+                  )}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Controls */}
+            <View style={styles.controls}>
+              <Pressable
+                onPress={() => {
+                  setRepeatMode(prevMode => (prevMode + 1) % 3);
+                }}
+                style={({pressed}) => {
+                  return [
+                    styles.controlButton,
+                    pressed && styles.buttonPressed,
+                  ];
+                }}>
+                {repeatMode === 2 ? (
+                  <MaterialCommunityIcons
+                    name="repeat"
+                    size={26}
+                    color={Colors.spotifyGreenDark}
+                  />
+                ) : repeatMode === 1 ? (
+                  <MaterialIcons
+                    name="repeat-one"
+                    size={26}
+                    color={Colors.spotifyGreenDark}
+                  />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="repeat-off"
+                    size={26}
+                    color={Colors.textSecondary}
+                  />
+                )}
+              </Pressable>
+              {/* Previous Button */}
+              <Pressable
+                onPress={() => TrackPlayer.skipToPrevious()}
+                style={({pressed}) => [
+                  styles.controlButton,
+                  pressed && styles.buttonPressed,
+                ]}>
+                <Text style={styles.controlIcon}>⏮</Text>
+              </Pressable>
+
+              {/* Play/Pause Button */}
+              <Pressable
+                onPress={() =>
+                  isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
+                }
+                style={({pressed}) => [
+                  styles.controlButton,
+                  styles.playButton,
+                  pressed && styles.buttonPressed,
+                ]}>
+                {isPlaying ? (
+                  <MaterialIcons
+                    name="pause-circle-outline"
+                    size={40}
+                    color={Colors.textPrimary}
+                  />
+                ) : (
+                  <MaterialIcons
+                    name="play-circle-outline"
+                    size={40}
+                    color={Colors.textPrimary}
+                  />
+                )}
+              </Pressable>
+
+              {/* Next Button */}
+              <Pressable
+                onPress={() => TrackPlayer.skipToNext()}
+                style={({pressed}) => [
+                  styles.controlButton,
+                  pressed && styles.buttonPressed,
+                ]}>
+                <Text style={styles.controlIcon}>⏭</Text>
+              </Pressable>
+
+              {/* Like Button */}
+              <Pressable
+                onPress={handleFav}
+                style={({pressed}) => {
+                  return [
+                    styles.controlButton,
+                    pressed && styles.buttonPressed,
+                  ];
+                }}>
+                <FontAwesome
+                  name={isFavorite ? 'heart' : 'heart-o'}
+                  size={22}
+                  color={
+                    isFavorite ? Colors.spotifyGreen : Colors.textSecondary
+                  }
+                />
+              </Pressable>
+            </View>
+
+            {/* Progress Bar - Interactable */}
+            <View style={styles.progressSection}>
+              <View style={styles.timeContainer}>
+                <Text style={styles.timeText}>
+                  {formatTime(progress.position)}
+                </Text>
+                <Text style={styles.timeText}>
+                  {formatTime(progress.duration)}
+                </Text>
+              </View>
+
+              <Pressable
+                style={styles.progressBarContainer}
+                onPress={e => {
+                  const {locationX} = e.nativeEvent;
+                  const containerWidth = 350; // approximate width
+                  const newPosition =
+                    (locationX / containerWidth) * progress.duration;
+                  handleSeek(newPosition);
+                }}>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {width: `${progressPercent}%`},
+                    ]}>
+                    <View style={styles.progressThumb} />
+                  </View>
+                </View>
+              </Pressable>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+      {close && (
+        <Animated.View style={styles.miniContainer}>
+          <Pressable onPress={handleClose}>
+            <View style={styles.miniArtworkWrapper}>
+              {shouldAnimateMiniPlayer && (
+                <>
+                  <Animated.View
+                    style={[
+                      styles.pulseCircle,
+                      {
+                        transform: [{scale: secPulseScale}],
+                        opacity: secPulseOpacity,
+                        borderColor: secondaryPulseColor,
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.pulseCircle,
+                      {
+                        transform: [{scale: pulseScale}],
+                        opacity: pulseOpacity,
+                        borderColor: pulseColor,
+                      },
+                    ]}
+                  />
+                </>
+              )}
+              {track.artwork ? (
+                <Animated.Image
+                  source={{uri: track.artwork}}
+                  style={[
+                    styles.miniArtwork,
+                    shouldAnimateMiniPlayer
+                      ? {transform: [{rotate: miniSpin}]}
+                      : null,
+                  ]}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.miniArtwork, styles.miniArtworkFallback]}>
+                  <Text style={styles.albumArtIcon}>🎵</Text>
+                </View>
+              )}
             </View>
           </Pressable>
-        </View>
-      </View>
-    </Animated.View>
+        </Animated.View>
+      )}
+    </>
   );
 };
 
@@ -864,5 +1074,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
+  },
+  closeButton: {
+    alignItems: 'center',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  closeBtnPressed: {
+    opacity: 0.7,
+    backgroundColor: Colors.backgroundPress,
+  },
+  miniContainer: {
+    position: 'absolute',
+    bottom: 50,
+    right: 30,
+  },
+  miniArtworkWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniArtwork: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderColor: Colors.white,
+    borderWidth: 2,
+  },
+  miniArtworkFallback: {
+    backgroundColor: Colors.backgroundHighlight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulseCircle: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: Colors.spotifyGreen,
   },
 });
