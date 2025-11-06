@@ -7,6 +7,7 @@ This Docker setup ensures **everyone** gets the exact same build environment tha
 ## 📋 What's Included
 
 ### Exact Versions That Work Together:
+
 - **Ubuntu**: 22.04
 - **Java/JDK**: OpenJDK 17
 - **Node.js**: 18.x
@@ -81,20 +82,20 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Build with Docker
-      run: |
-        docker build -f Dockerfile.ci -t orpheus-ci .
-        docker run -v ${PWD}:/app orpheus-ci cd android && ./gradlew assembleRelease
-    
-    - name: Upload APK
-      uses: actions/upload-artifact@v3
-      with:
-        name: app-release
-        path: android/app/build/outputs/apk/release/*.apk
+      - uses: actions/checkout@v3
+
+      - name: Build with Docker
+        run: |
+          docker build -f Dockerfile.ci -t orpheus-ci .
+          docker run -v ${PWD}:/app orpheus-ci cd android && ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release
+          path: android/app/build/outputs/apk/release/*.apk
 ```
 
 ### 3. Clean Build (When Things Get Weird)
@@ -114,13 +115,15 @@ docker-compose exec dev bash
 ## ⚠️ Important Notes
 
 ### What Docker DOES Help With:
+
 ✅ Consistent build environment across all machines  
 ✅ No need to install Android SDK, Java, Gradle manually  
 ✅ CI/CD automated builds  
 ✅ Isolation from host system issues  
-✅ Version control of build tools  
+✅ Version control of build tools
 
 ### What Docker DOESN'T Help With:
+
 ❌ Running the app on physical device (need USB passthrough)  
 ❌ Android emulator (requires nested virtualization & GUI)  
 ❌ Hot reload during development (Metro bundler limitations)  
@@ -137,12 +140,14 @@ docker-compose exec dev bash
 ## 🐛 Troubleshooting
 
 ### Build Fails with Memory Error
+
 ```bash
 # Increase Docker memory allocation
 # Docker Desktop → Settings → Resources → Memory: 8GB+
 ```
 
 ### "Gradle daemon disappeared unexpectedly"
+
 ```bash
 # Add to android/gradle.properties (already done):
 org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
@@ -151,6 +156,7 @@ org.gradle.parallel=false
 ```
 
 ### Dependencies Not Found
+
 ```bash
 # Clear npm cache and reinstall
 docker-compose exec dev bash
@@ -160,6 +166,7 @@ npm install --legacy-peer-deps
 ```
 
 ### Android Build Hangs
+
 ```bash
 # Kill gradle daemons inside container
 docker-compose exec dev pkill -f gradle
@@ -174,24 +181,29 @@ docker-compose restart dev
 ### Critical Android Gradle Files
 
 **`android/build.gradle`** (Root)
+
 - Android Gradle Plugin: 8.5.2
 - compileSdk: 35
 - targetSdk: 35
 - NDK: 25.1.8937393
 
 **`android/app/build.gradle`** (App)
+
 - Forces androidx.core:1.13.1 (critical!)
 
 **`android/gradle.properties`**
+
 - JVM memory: 2GB (for low-RAM systems)
 - Parallel builds: disabled
 
 **`android/gradle/wrapper/gradle-wrapper.properties`**
+
 - Gradle version: 8.8
 
 ### Critical Package Versions
 
 **`package.json`**
+
 ```json
 {
   "react-native": "0.74.5",
@@ -213,6 +225,7 @@ docker-compose restart dev
 5. **gesture-handler 2.16.x incompatible** - Needs `ViewManagerWithGeneratedInterface`
 
 ### The Catch-22 We Solved:
+
 - AGP 8.7.3 + compileSdk 35 → requires Gradle 8.9+
 - Gradle 8.9+ → breaks RN 0.74.5 gradle plugin
 - **Solution**: AGP 8.5.2 + forced androidx.core:1.13.1
@@ -230,6 +243,7 @@ When React Native or dependencies update:
 ## 📞 Support
 
 If you encounter issues:
+
 1. Check the exact error message
 2. Verify Docker has enough resources (8GB+ RAM, 50GB+ disk)
 3. Try clean build: `docker-compose down -v && docker-compose build --no-cache`
@@ -238,6 +252,7 @@ If you encounter issues:
 ## 🙏 Acknowledgments
 
 Created after 2 days of debugging:
+
 - Corrupted Gradle cache
 - Memory issues (7GB RAM)
 - Version incompatibilities

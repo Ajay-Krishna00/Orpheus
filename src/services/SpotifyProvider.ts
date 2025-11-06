@@ -1,14 +1,14 @@
-import { Album, Artist, Playlist, Track } from "../interface/types";
-import { MetadataProvider } from "./MetadataProvider";
+import {Album, Artist, Playlist, Track} from '../interface/types';
+import {MetadataProvider} from './MetadataProvider';
 import axios from 'axios';
-import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from '@env';
+import {SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET} from '@env';
 
 /**
  * SpotifyProvider - Metadata source (like Spotube)
- * 
+ *
  * This provides high-quality metadata from Spotify's official API.
  * For audio playback, we use YouTube (similar to Spotube's approach).
- * 
+ *
  * Setup:
  * 1. Go to https://developer.spotify.com/dashboard
  * 2. Create an app
@@ -46,19 +46,26 @@ export class SpotifyProvider extends MetadataProvider {
         'grant_type=client_credentials',
         {
           headers: {
-            'Authorization': `Basic ${base64Credentials}`,
+            Authorization: `Basic ${base64Credentials}`,
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        }
+        },
       );
 
       this.accessToken = response.data.access_token;
-      this.tokenExpiresAt = Date.now() + (response.data.expires_in * 1000) - 60000;
+      this.tokenExpiresAt =
+        Date.now() + response.data.expires_in * 1000 - 60000;
 
       // Set token for API requests
-      this.api.defaults.headers.common['Authorization'] = `Bearer ${this.accessToken}`;
+      this.api.defaults.headers.common[
+        'Authorization'
+      ] = `Bearer ${this.accessToken}`;
 
-      console.log('✅ Spotify token obtained, expires in:', response.data.expires_in, 'seconds');
+      console.log(
+        '✅ Spotify token obtained, expires in:',
+        response.data.expires_in,
+        'seconds',
+      );
     } catch (error: any) {
       console.error('❌ Failed to get Spotify token:', error.message);
       if (error.response) {
@@ -66,7 +73,7 @@ export class SpotifyProvider extends MetadataProvider {
       }
       throw error;
     }
-  }  // Transform Spotify track to our model
+  } // Transform Spotify track to our model
   private transformTrack(spotifyTrack: any): Track {
     return {
       id: spotifyTrack.id,
@@ -76,7 +83,9 @@ export class SpotifyProvider extends MetadataProvider {
         id: spotifyTrack.album.id,
         name: spotifyTrack.album.name,
         albumType: spotifyTrack.album.album_type,
-        artists: spotifyTrack.album.artists.map((a: any) => this.transformArtist(a)),
+        artists: spotifyTrack.album.artists.map((a: any) =>
+          this.transformArtist(a),
+        ),
         images: spotifyTrack.album.images.map((img: any) => ({
           uri: img.url,
           height: img.height,
@@ -96,11 +105,12 @@ export class SpotifyProvider extends MetadataProvider {
       id: spotifyArtist.id,
       name: spotifyArtist.name,
       externalUri: spotifyArtist.external_urls?.spotify || '',
-      images: spotifyArtist.images?.map((img: any) => ({
-        uri: img.url,
-        height: img.height,
-        width: img.width,
-      })) || [],
+      images:
+        spotifyArtist.images?.map((img: any) => ({
+          uri: img.url,
+          height: img.height,
+          width: img.width,
+        })) || [],
     };
   }
 
@@ -146,13 +156,15 @@ export class SpotifyProvider extends MetadataProvider {
         q: query,
         type: 'track,album,artist',
         limit: 20,
-      }
+      },
     });
 
     const data = response.data;
 
     return {
-      tracks: (data.tracks?.items || []).map((track: any) => this.transformTrack(track)),
+      tracks: (data.tracks?.items || []).map((track: any) =>
+        this.transformTrack(track),
+      ),
       albums: (data.albums?.items || []).map((album: any) => ({
         id: album.id,
         name: album.name,
@@ -166,7 +178,9 @@ export class SpotifyProvider extends MetadataProvider {
         releaseDate: album.release_date,
         totalTracks: album.total_tracks,
       })),
-      artists: (data.artists?.items || []).map((artist: any) => this.transformArtist(artist)),
+      artists: (data.artists?.items || []).map((artist: any) =>
+        this.transformArtist(artist),
+      ),
       playlists: [],
     };
   }

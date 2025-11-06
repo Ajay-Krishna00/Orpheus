@@ -1,9 +1,9 @@
-import { Album, Artist, Playlist, Track, User } from "../interface/types";
+import {Album, Artist, Playlist, Track} from '../interface/types';
 
 /**
  * MetadataProvider defines the "contract" that any
  * metadata source (API, database, etc.) must follow.
- * 
+ *
  * It abstracts away the source — so the rest of your app
  * doesn’t care *where* the data came from.
  */
@@ -30,5 +30,4 @@ export abstract class MetadataProvider {
     artists?: Artist[];
     playlists?: Playlist[];
   }>;
-
 }

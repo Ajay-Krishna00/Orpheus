@@ -1,49 +1,75 @@
-import { useState } from "react";
-import { Track } from "../interface/types";
-import TrackPlayer from "react-native-track-player";
-import { 
-  FlatList, 
-  Pressable, 
-  Text, 
-  TextInput, 
+import {useState} from 'react';
+import {Track} from '../interface/types';
+import TrackPlayer from 'react-native-track-player';
+import {
+  FlatList,
+  Pressable,
+  Text,
+  TextInput,
   View,
   StyleSheet,
   ActivityIndicator,
   StatusBar,
-  Image
-} from "react-native";
-import { Player } from "../components/Player";
-import { SpotifyProvider } from "../services/SpotifyProvider";
-import { YouTubeAudioProvider } from "../services/YouTubeAudioProvider";
-import { Colors } from "../theme/colors";
+  Image,
+} from 'react-native';
+import {SpotifyProvider} from '../services/SpotifyProvider';
+import {YouTubeAudioProvider} from '../services/YouTubeAudioProvider';
+import {Colors} from '../theme/colors';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import {NativeStackNavigationProp} from 'react-native-screens/lib/typescript/native-stack/types';
+import {RootStackParamList} from '../interface/navigation';
 
 const metadataProvider = new SpotifyProvider();
 const audioProvider = new YouTubeAudioProvider();
 
-export const SearchScreen = ()=>{
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Search'>;
+  setTrackLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setNotFound: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+export const SearchScreen = ({
+  navigation,
+  setTrackLoading,
+  setNotFound,
+}: Props) => {
   const [query, setQuery] = useState('');
   const [track, setTrack] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
 
   const onSearch = async () => {
-    if(!query) return;
+    if (!query) return;
     setLoading(true);
     try {
       const result = await metadataProvider.search(query);
-      setTrack(result.tracks)
-    }
-    catch (e) {
+      setTrack(result.tracks);
+    } catch (e) {
       console.error('search failed:', e);
     }
     setLoading(false);
-  }
+  };
   const onPlayTrack = async (track: Track) => {
     try {
-      const audioUrl = await audioProvider.getAudioUrl(track);
+      setTrackLoading(true);
+      setNotFound(false);
       await TrackPlayer.reset();
-      
-      console.log('🎵 Adding track to player with URL:', audioUrl.substring(0, 100) + '...');
-      
+      const audioUrl = await audioProvider.getAudioUrl(track);
+      if (audioUrl === 'NOT FOUND') {
+        setTrackLoading(false);
+        throw new Error('Audio Not Found');
+      }
+
+      console.log(
+        '🎵 Adding track to player with URL:',
+        audioUrl.substring(0, 100) + '...',
+      );
+
       // For Invidious URLs, we need minimal headers or no custom headers
       // The URL is already a direct stream link
       await TrackPlayer.add({
@@ -53,28 +79,57 @@ export const SearchScreen = ()=>{
         artist: track.artists.map(a => a.name).join(', '),
         artwork: track.album?.images?.[0]?.uri || undefined,
       });
-      
       console.log('✅ Track added, starting playback...');
+      setCurrentTrackId(track.id);
       await TrackPlayer.play();
+      sleep(2000);
+      setTrackLoading(false);
+    } catch (e) {
+      console.log('❌ Playback failed:', e);
+      setNotFound(true);
+      await TrackPlayer.stop();
     }
-    catch (e) {
-      console.error('❌ Playback failed:', e);
-    }
-  }
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.black} />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Search</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: 2,
+            }}>
+            <Image
+              source={require('../../assets/Orpheus.png')}
+              style={{width: 52, height: 52}}
+            />
+            <Text style={styles.headerTitle}>Orpheus</Text>
+          </View>
+          <Pressable onPress={() => navigation.navigate('Favorite')}>
+            <FontAwesome name={'heart'} size={25} color={Colors.error} />
+          </Pressable>
+        </View>
         <Text style={styles.headerSubtitle}>Find your favorite music</Text>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <FontAwesome
+          name={'search'}
+          size={16}
+          color={Colors.white}
+          style={{marginRight: 10}}
+        />
         <TextInput
           placeholder="What do you want to listen to?"
           placeholderTextColor={Colors.textSecondary}
@@ -97,19 +152,18 @@ export const SearchScreen = ()=>{
       {/* Results List */}
       <FlatList
         data={track}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => (
-          <Pressable 
+        renderItem={({item}) => (
+          <Pressable
             onPress={() => onPlayTrack(item)}
-            style={({ pressed }) => [
+            style={({pressed}) => [
               styles.trackItem,
-              pressed && styles.trackItemPressed
-            ]}
-          >
+              pressed && styles.trackItemPressed,
+            ]}>
             {item.album?.images?.[0]?.uri ? (
-              <Image 
-                source={{ uri: item.album.images[0].uri }}
+              <Image
+                source={{uri: item.album.images[0].uri}}
                 style={styles.albumArt}
               />
             ) : (
@@ -117,18 +171,39 @@ export const SearchScreen = ()=>{
                 <Text style={styles.placeholderIcon}>🎵</Text>
               </View>
             )}
-            
+
             <View style={styles.trackInfo}>
               <Text style={styles.trackName} numberOfLines={1}>
                 {item.name}
               </Text>
-              <Text style={styles.artistName} numberOfLines={1}>
-                {item.artists.map(a => a.name).join(', ')}
-              </Text>
-            </View>
-
-            <View style={styles.playIconContainer}>
-              <Text style={styles.playIcon}>▶</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: 0,
+                }}>
+                <Text style={styles.artistName} numberOfLines={1}>
+                  {item.artists.map(a => a.name).join(', ')}
+                </Text>
+                <View style={styles.playIconContainer}>
+                  <Text style={styles.playIcon}>
+                    {item.id === currentTrackId ? (
+                      <Icon
+                        name="music"
+                        size={20}
+                        color={Colors.spotifyGreen}
+                      />
+                    ) : (
+                      <Icon
+                        name="play"
+                        size={14}
+                        color={Colors.textSecondary}
+                      />
+                    )}
+                  </Text>
+                </View>
+              </View>
             </View>
           </Pressable>
         )}
@@ -137,41 +212,24 @@ export const SearchScreen = ()=>{
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🔍</Text>
               <Text style={styles.emptyText}>No results found</Text>
-              <Text style={styles.emptySubtext}>Try searching for something else</Text>
+              <Text style={styles.emptySubtext}>
+                Try searching for something else
+              </Text>
             </View>
           ) : !loading ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🎵</Text>
               <Text style={styles.emptyText}>Play what you love</Text>
-              <Text style={styles.emptySubtext}>Search for songs, artists, and albums</Text>
+              <Text style={styles.emptySubtext}>
+                Search for songs, artists, and albums
+              </Text>
             </View>
           ) : null
         }
       />
-      
-      {/* Player at bottom */}
-      <Player/>
-
-      {/* Bottom Navigation Bar */}
-      <View style={styles.navBar}>
-        <Pressable style={styles.navItem}>
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navLabel}>Home</Text>
-        </Pressable>
-        
-        <Pressable style={[styles.navItem, styles.navItemActive]}>
-          <Text style={[styles.navIcon, styles.navIconActive]}>🔍</Text>
-          <Text style={[styles.navLabel, styles.navLabelActive]}>Search</Text>
-        </Pressable>
-        
-        <Pressable style={styles.navItem}>
-          <Text style={styles.navIcon}>📚</Text>
-          <Text style={styles.navLabel}>Library</Text>
-        </Pressable>
-      </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -293,46 +351,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
-  },
-  navBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: Colors.black,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.backgroundHighlight,
-    paddingBottom: 10,
-    padding:5,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  navItemActive: {
-    // Active state
-  },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 2,
-    opacity: 0.6,
-  },
-  navIconActive: {
-    opacity: 1,
-  },
-  navLabel: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  navLabelActive: {
-    color: Colors.spotifyGreen,
-    fontWeight: '600',
   },
 });

@@ -1,16 +1,17 @@
-import { Album, Artist, Playlist, Track } from "../interface/types";
-import { MetadataProvider } from "./MetadataProvider";
-import axios from "axios";
+import {Album, Artist, Playlist, Track} from '../interface/types';
+import {MetadataProvider} from './MetadataProvider';
+import axios from 'axios';
 
 export class MusicBrainzProvider extends MetadataProvider {
-  private baseUrl = "https://musicbrainz.org/ws/2";
+  private baseUrl = 'https://musicbrainz.org/ws/2';
 
   // Create axios instance with required headers
   private api = axios.create({
     baseURL: this.baseUrl,
     headers: {
-      'User-Agent': 'Orpheus/1.0.0 (https://github.com/Ajay-Krishna00/Orpheus; enthusiastajay00@gmail.com)',
-      'Accept': 'application/json'
+      'User-Agent':
+        'Orpheus/1.0.0 (https://github.com/Ajay-Krishna00/Orpheus; enthusiastajay00@gmail.com)',
+      Accept: 'application/json',
     },
     timeout: 30000, // 30 second timeout
   });
@@ -25,22 +26,24 @@ export class MusicBrainzProvider extends MetadataProvider {
     };
   }
   private transformTrack(mbTrack: any): Track {
-    const artists = (mbTrack['artist-credit'] || []).map((a: any) => this.transformArtist(a.artist));
+    const artists = (mbTrack['artist-credit'] || []).map((a: any) =>
+      this.transformArtist(a.artist),
+    );
     return {
       id: mbTrack.id,
       name: mbTrack.title,
       durationMs: mbTrack.duration || 0,
       album: {
-        id: mbTrack.releases?.[0]?.id || "",
-        name: mbTrack.releases?.[0]?.title || "",
-        albumType: "album",
+        id: mbTrack.releases?.[0]?.id || '',
+        name: mbTrack.releases?.[0]?.title || '',
+        albumType: 'album',
         artists: artists,
         images: [],
       },
       artists: artists,
       externalUri: `https://musicbrainz.org/recording/${mbTrack.id}`,
       explicit: false,
-    }
+    };
   }
   // === Implement the Contract Methods ===
   async getTrack(id: string): Promise<Track> {
@@ -50,8 +53,8 @@ export class MusicBrainzProvider extends MetadataProvider {
       const res = await this.api.get(`/recording/${id}`, {
         params: {
           fmt: 'json',
-          inc: 'artists+releases'
-        }
+          inc: 'artists+releases',
+        },
       });
       return this.transformTrack(res.data);
     } catch (error: any) {
@@ -67,27 +70,34 @@ export class MusicBrainzProvider extends MetadataProvider {
       const res = await this.api.get(`/release/${id}`, {
         params: {
           fmt: 'json',
-          inc: 'artists+recordings'
-        }
+          inc: 'artists+recordings',
+        },
       });
       const mbAlbum = res.data;
-      const artists = (mbAlbum['artist-credit'] || []).map((a: any) => this.transformArtist(a.artist));
+      const artists = (mbAlbum['artist-credit'] || []).map((a: any) =>
+        this.transformArtist(a.artist),
+      );
       return {
         id: mbAlbum.id,
         name: mbAlbum.title,
-        albumType: "album",
+        albumType: 'album',
         artists: artists,
         images: [],
         releaseDate: mbAlbum.date,
-        totalTracks: mbAlbum["track-count"],
-      }
+        totalTracks: mbAlbum['track-count'],
+      };
     } catch (error: any) {
       console.error('MusicBrainz getAlbum error:', error.message);
       throw error;
     }
   }
 
-  async search(query: string): Promise<{ tracks: Track[]; albums?: Album[]; artists?: Artist[]; playlists?: Playlist[]; }> {
+  async search(query: string): Promise<{
+    tracks: Track[];
+    albums?: Album[];
+    artists?: Artist[];
+    playlists?: Playlist[];
+  }> {
     try {
       console.log('🔍 MusicBrainz search started for:', query);
 
@@ -101,10 +111,13 @@ export class MusicBrainzProvider extends MetadataProvider {
           query: query,
           fmt: 'json',
           limit: 50, // Get more results so we can filter
-        }
+        },
       });
 
-      console.log('✅ API response received, recordings count:', res.data.recordings?.length || 0);
+      console.log(
+        '✅ API response received, recordings count:',
+        res.data.recordings?.length || 0,
+      );
 
       // Filter and prioritize original recordings
       const allTracks = (res.data.recordings || [])
@@ -114,7 +127,8 @@ export class MusicBrainzProvider extends MetadataProvider {
           const artistName = track.artists?.[0]?.name?.toLowerCase() || '';
 
           // Filter out obvious covers, remixes, mashups, and problematic entries
-          return !trackName.includes('cover') &&
+          return (
+            !trackName.includes('cover') &&
             !trackName.includes('karaoke') &&
             !trackName.includes('mashup') &&
             !trackName.includes('vs.') &&
@@ -122,11 +136,16 @@ export class MusicBrainzProvider extends MetadataProvider {
             !trackName.includes('not featuring') &&
             !trackName.includes('instrumental') &&
             !artistName.includes('various') &&
-            !artistName.includes('tribute');
+            !artistName.includes('tribute')
+          );
         })
         .slice(0, 25); // Take top 25 after filtering
 
-      console.log('✅ Search successful, returning', allTracks.length, 'tracks after filtering');
+      console.log(
+        '✅ Search successful, returning',
+        allTracks.length,
+        'tracks after filtering',
+      );
 
       return {
         tracks: allTracks,
@@ -148,7 +167,9 @@ export class MusicBrainzProvider extends MetadataProvider {
         console.error('Response status:', error.response.status);
         console.error('Response data:', error.response.data);
       } else if (error.request) {
-        console.error('No response received. Request was made but no response.');
+        console.error(
+          'No response received. Request was made but no response.',
+        );
         console.error('Request:', error.request);
       }
 

@@ -36,6 +36,7 @@ Orpheus/
 ## 🎯 What You Actually Need
 
 ### Working Alone (Physical Device)
+
 ```
 ✅ src/                    ← Your code
 ✅ android/                ← Build config
@@ -49,6 +50,7 @@ Orpheus/
 ```
 
 ### Sharing with Team
+
 ```
 ✅ All of the above
 ✅ DOCKER_BUILD.md         ← Give this to teammates
@@ -57,6 +59,7 @@ Orpheus/
 ```
 
 ### Setting up CI/CD
+
 ```
 ✅ All of the above
 ✅ .github/workflows/      ← Already configured
@@ -66,6 +69,7 @@ Orpheus/
 ## 📊 Information Flow
 
 ### Scenario 1: You Working Locally
+
 ```
 YOU
  │
@@ -82,6 +86,7 @@ YOU
 ```
 
 ### Scenario 2: Teammate Using Docker
+
 ```
 TEAMMATE
  │
@@ -99,6 +104,7 @@ TEAMMATE
 ```
 
 ### Scenario 3: GitHub Actions (Automatic)
+
 ```
 YOU PUSH CODE TO GITHUB
  │
@@ -116,6 +122,7 @@ YOU PUSH CODE TO GITHUB
 ## 🎓 Learning Path
 
 ### Day 1 (You - Right Now)
+
 ```
 1. Keep using: npm run android
 2. Bookmark: BUILD_REFERENCE.md
@@ -123,6 +130,7 @@ YOU PUSH CODE TO GITHUB
 ```
 
 ### Week 1 (Understanding)
+
 ```
 1. Read: BUILD_REFERENCE.md (understand versions)
 2. Run: check-environment.ps1 (verify setup)
@@ -130,6 +138,7 @@ YOU PUSH CODE TO GITHUB
 ```
 
 ### Month 1 (Sharing)
+
 ```
 1. Push to GitHub (auto-builds start)
 2. Share DOCKER_BUILD.md with teammates
@@ -139,6 +148,7 @@ YOU PUSH CODE TO GITHUB
 ## 🔄 Quick Commands Cheat Sheet
 
 ### For You (Daily)
+
 ```powershell
 # Build and run on device
 npm run android
@@ -154,6 +164,7 @@ npm run android
 ```
 
 ### For Teammates (First Time)
+
 ```bash
 # Quick start with Docker
 docker-compose up -d dev
@@ -167,6 +178,7 @@ check-environment.ps1   # Windows
 ```
 
 ### For CI/CD (Automatic)
+
 ```bash
 # Just push code
 git add .
@@ -179,16 +191,16 @@ git push origin main
 
 ## 🆘 "Which File Do I Open?"
 
-| Your Question | Open This File |
-|---------------|----------------|
-| "What Java version do I need?" | `BUILD_REFERENCE.md` |
-| "How do I verify my setup?" | Run `check-environment.ps1` |
-| "How do teammates get started?" | `DOCKER_BUILD.md` |
-| "What are all these files?" | `README.md` (you're here!) |
-| "Why was Docker added?" | `DOCKER_SUMMARY.md` |
-| "How do I use Docker?" | `DOCKER_BUILD.md` |
-| "What if build fails?" | `BUILD_REFERENCE.md` |
-| "How do I share with GitHub?" | `.github/workflows/android-build.yml` |
+| Your Question                   | Open This File                        |
+| ------------------------------- | ------------------------------------- |
+| "What Java version do I need?"  | `BUILD_REFERENCE.md`                  |
+| "How do I verify my setup?"     | Run `check-environment.ps1`           |
+| "How do teammates get started?" | `DOCKER_BUILD.md`                     |
+| "What are all these files?"     | `README.md` (you're here!)            |
+| "Why was Docker added?"         | `DOCKER_SUMMARY.md`                   |
+| "How do I use Docker?"          | `DOCKER_BUILD.md`                     |
+| "What if build fails?"          | `BUILD_REFERENCE.md`                  |
+| "How do I share with GitHub?"   | `.github/workflows/android-build.yml` |
 
 ## 💡 The Big Picture
 
