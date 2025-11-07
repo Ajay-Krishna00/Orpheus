@@ -1,5 +1,8 @@
 import React, {useEffect, useState} from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {
+  NavigationContainer,
+  useNavigationContainerRef,
+} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import TrackPlayer, {
   AppKilledPlaybackBehavior,
@@ -17,10 +20,14 @@ import {SearchScreen} from './src/screens/SearchScreen';
 import {Colors} from './src/theme/colors';
 import {Favorite} from './src/screens/Favourite';
 import {Player} from './src/components/Player';
+import {LyricsView} from './src/screens/Lyrics';
+import {RootStackParamList} from './src/interface/navigation';
+import {PlaylistDetail} from './src/screens/PlaylistDetail';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [trackLoading, setTrackLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
@@ -69,7 +76,7 @@ export default function App() {
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: Colors.black}}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.black} />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
@@ -95,9 +102,42 @@ export default function App() {
               />
             )}
           </Stack.Screen>
+          <Stack.Screen
+            name="Lyrics"
+            options={{presentation: 'modal', animation: 'slide_from_bottom'}}>
+            {props => <LyricsView {...props} />}
+          </Stack.Screen>
+          <Stack.Screen
+            name="PlaylistDetail"
+            options={{presentation: 'modal', animation: 'slide_from_right'}}>
+            {props => (
+              <PlaylistDetail
+                {...props}
+                setCurrentTrackLoading={setTrackLoading}
+                setCurrentTrackNotFound={setNotFound}
+              />
+            )}
+          </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
-      {isPlayerReady && <Player setClosePlayer={setClosePlayer} />}
+      {isPlayerReady && (
+        <Player
+          setClosePlayer={setClosePlayer}
+          onOpenLyrics={(
+            artistName: string,
+            trackTitle: string,
+            trackId?: string,
+          ) => {
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('Lyrics', {
+                artist: artistName,
+                title: trackTitle,
+                trackId,
+              });
+            }
+          }}
+        />
+      )}
 
       {notFound && (
         <View

@@ -20,6 +20,7 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import {NativeStackNavigationProp} from 'react-native-screens/lib/typescript/native-stack/types';
 import {RootStackParamList} from '../interface/navigation';
+import {Recommendations} from '../components/Recommendations';
 
 const metadataProvider = new SpotifyProvider();
 const audioProvider = new YouTubeAudioProvider();
@@ -250,6 +251,7 @@ export const SearchScreen = ({
               <Text style={styles.emptySubtext}>
                 Search for songs, artists, and albums
               </Text>
+              {/* <Recommendations /> */}
             </View>
           ) : null
         }

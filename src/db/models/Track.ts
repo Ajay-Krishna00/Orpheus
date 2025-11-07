@@ -9,6 +9,7 @@ export default class Track extends Model {
   @field('duration_ms') durationMs!: number;
   @field('explicit') explicit!: boolean;
   @field('external_uri') externalUri!: string;
+  @field('lyrics') lyrics!: string;
 
   // Belongs to one album
   @relation('albums', 'album_id') album;

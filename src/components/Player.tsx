@@ -154,8 +154,10 @@ const upsertArtistRelations = async (
 
 export const Player = ({
   setClosePlayer,
+  onOpenLyrics,
 }: {
   setClosePlayer: React.Dispatch<React.SetStateAction<boolean>>;
+  onOpenLyrics?: (artist: string, title: string, trackId?: string) => void;
 }) => {
   const playbackState = usePlaybackState();
   const progress = useProgress();
@@ -690,55 +692,64 @@ export const Player = ({
           </View>
           {/* Player Content */}
           <View style={styles.content}>
-            {/* Track Info */}
-            <View style={styles.trackInfoRow}>
-              {track.artwork ? (
-                <Image
-                  source={{uri: track.artwork}}
-                  style={styles.albumArt}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.albumArt}>
-                  <Text style={styles.albumArtIcon}>🎵</Text>
+            <Pressable
+              onPress={() =>
+                onOpenLyrics?.(
+                  typeof track.artist === 'string' ? track.artist : '',
+                  typeof track.title === 'string' ? track.title : '',
+                  typeof track.lyrics === 'string' ? track.lyrics : '',
+                )
+              }
+              style={({pressed}) => [pressed && styles.buttonPressed]}>
+              <View style={styles.trackInfoRow}>
+                {track.artwork ? (
+                  <Image
+                    source={{uri: track.artwork}}
+                    style={styles.albumArt}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.albumArt}>
+                    <Text style={styles.albumArtIcon}>🎵</Text>
+                  </View>
+                )}
+
+                <View style={styles.textContainer}>
+                  <Text style={styles.trackTitle} numberOfLines={1}>
+                    {track.title}
+                  </Text>
+                  <Text style={styles.trackArtist} numberOfLines={1}>
+                    {track.artist}
+                  </Text>
                 </View>
-              )}
 
-              <View style={styles.textContainer}>
-                <Text style={styles.trackTitle} numberOfLines={1}>
-                  {track.title}
-                </Text>
-                <Text style={styles.trackArtist} numberOfLines={1}>
-                  {track.artist}
-                </Text>
+                {/* Quick Play/Pause */}
+                <Pressable
+                  onPress={() =>
+                    isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
+                  }
+                  style={({pressed}) => [
+                    styles.quickPlayButton,
+                    pressed && styles.buttonPressed,
+                  ]}>
+                  <Text style={styles.quickPlayIcon}>
+                    {isPlaying ? (
+                      <MaterialIcons
+                        name="pause-circle-outline"
+                        size={34}
+                        color={Colors.textPrimary}
+                      />
+                    ) : (
+                      <MaterialIcons
+                        name="play-circle-outline"
+                        size={34}
+                        color={Colors.textPrimary}
+                      />
+                    )}
+                  </Text>
+                </Pressable>
               </View>
-
-              {/* Quick Play/Pause */}
-              <Pressable
-                onPress={() =>
-                  isPlaying ? TrackPlayer.pause() : TrackPlayer.play()
-                }
-                style={({pressed}) => [
-                  styles.quickPlayButton,
-                  pressed && styles.buttonPressed,
-                ]}>
-                <Text style={styles.quickPlayIcon}>
-                  {isPlaying ? (
-                    <MaterialIcons
-                      name="pause-circle-outline"
-                      size={34}
-                      color={Colors.textPrimary}
-                    />
-                  ) : (
-                    <MaterialIcons
-                      name="play-circle-outline"
-                      size={34}
-                      color={Colors.textPrimary}
-                    />
-                  )}
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
 
             {/* Controls */}
             <View style={styles.controls}>

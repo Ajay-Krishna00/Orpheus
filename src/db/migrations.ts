@@ -6,11 +6,11 @@ import {
 export const migrations = schemaMigrations({
   migrations: [
     {
-      toVersion: 3,
+      toVersion: 4,
       steps: [
         addColumns({
-          table: 'playlist_tracks',
-          columns: [{name: 'created_at', type: 'number'}],
+          table: 'tracks',
+          columns: [{name: 'lyrics', type: 'string', isOptional: true}],
         }),
       ],
     },

@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const musicSchema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     // -----------------------------
     // USERS
@@ -66,6 +66,7 @@ export const musicSchema = appSchema({
         {name: 'duration_ms', type: 'number'},
         {name: 'explicit', type: 'boolean'},
         {name: 'external_uri', type: 'string'},
+        {name: 'lyrics', type: 'string', isOptional: true},
         {name: 'album_id', type: 'string', isIndexed: true},
       ],
     }),
